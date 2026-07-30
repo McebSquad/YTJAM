@@ -26,6 +26,6 @@
       "run_at": "document_idle"
     }
   ],
-  "permissions": ["storage", "tabs"],
+  "permissions": ["storage", "tabs", "offscreen"],
   "host_permissions": ["https://music.youtube.com/*"]
 }

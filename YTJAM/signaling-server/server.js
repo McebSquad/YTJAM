@@ -30,6 +30,7 @@ wss.on('connection', (ws) => {
   ws.id = Math.random().toString(36).slice(2, 10);
   ws.roomCode = null;
   ws.role = null;
+  console.log(`[conexión] cliente ${ws.id} conectado`);
 
   ws.on('message', (raw) => {
     let msg;
@@ -45,6 +46,7 @@ wss.on('connection', (ws) => {
         rooms.set(code, { host: ws, listeners: new Map() });
         ws.roomCode = code;
         ws.role = 'host';
+        console.log(`[sala creada] ${code} por cliente ${ws.id}`);
         send(ws, { type: 'room-created', roomCode: code });
         break;
       }
@@ -52,12 +54,14 @@ wss.on('connection', (ws) => {
       case 'join-room': {
         const room = rooms.get(msg.roomCode);
         if (!room || !room.host) {
+          console.log(`[unión fallida] cliente ${ws.id} intentó sala ${msg.roomCode} (no existe)`);
           send(ws, { type: 'error', message: 'Sala no existe o el host se desconectó' });
           return;
         }
         ws.roomCode = msg.roomCode;
         ws.role = 'listener';
         room.listeners.set(ws.id, ws);
+        console.log(`[unión exitosa] cliente ${ws.id} entró a sala ${msg.roomCode}`);
         // Avisar al host que hay un nuevo oyente esperando conexión WebRTC
         send(room.host, { type: 'listener-joined', listenerId: ws.id });
         send(ws, { type: 'joined', hostPresent: true });

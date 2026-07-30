@@ -37,18 +37,26 @@ async function refreshView() {
   showView(viewIdle);
 }
 
-document.getElementById('btn-create').addEventListener('click', async () => {
+const btnCreate = document.getElementById('btn-create');
+const btnJoin = document.getElementById('btn-join');
+
+btnCreate.addEventListener('click', async () => {
   errorMsg.textContent = '';
   const hasTab = await checkYtmTabOpen();
   if (!hasTab) {
     showView(viewNoTab);
     return;
   }
-  await chrome.runtime.sendMessage({ type: 'create-jam' });
+  btnCreate.disabled = true;
+  btnJoin.disabled = true;
+  const res = await chrome.runtime.sendMessage({ type: 'create-jam' });
+  if (res && res.error) errorMsg.textContent = res.error;
+  btnCreate.disabled = false;
+  btnJoin.disabled = false;
   setTimeout(refreshView, 500);
 });
 
-document.getElementById('btn-join').addEventListener('click', async () => {
+btnJoin.addEventListener('click', async () => {
   errorMsg.textContent = '';
   const code = document.getElementById('input-code').value.trim();
   if (code.length !== 5) {
@@ -60,7 +68,12 @@ document.getElementById('btn-join').addEventListener('click', async () => {
     showView(viewNoTab);
     return;
   }
-  await chrome.runtime.sendMessage({ type: 'join-jam', roomCode: code });
+  btnCreate.disabled = true;
+  btnJoin.disabled = true;
+  const res = await chrome.runtime.sendMessage({ type: 'join-jam', roomCode: code });
+  if (res && res.error) errorMsg.textContent = res.error;
+  btnCreate.disabled = false;
+  btnJoin.disabled = false;
   setTimeout(refreshView, 500);
 });
 
