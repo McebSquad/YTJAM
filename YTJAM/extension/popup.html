@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>YT Music Jam</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <h1>YT Music Jam</h1>
+    <p id="subtitle">Escucha sincronizado con tus amigos</p>
+  </header>
+
+  <main id="view-idle">
+    <button id="btn-create" class="primary">Crear jam</button>
+    <div class="divider">o</div>
+    <input id="input-code" placeholder="Código de sala (ej: A3F9K)" maxlength="5" />
+    <button id="btn-join" class="secondary">Unirse</button>
+    <p id="error-msg" class="error"></p>
+  </main>
+
+  <main id="view-connected" class="hidden">
+    <p class="role-label" id="role-label"></p>
+    <div class="room-code-box">
+      <span id="room-code-display"></span>
+      <button id="btn-copy" title="Copiar código">Copiar</button>
+    </div>
+    <p class="hint" id="hint-text"></p>
+    <button id="btn-leave" class="danger">Salir de la jam</button>
+  </main>
+
+  <main id="view-no-tab" class="hidden">
+    <p class="error">Abre una pestaña de music.youtube.com primero.</p>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>
