@@ -2,7 +2,7 @@
 // las conexiones WebRTC (host <-> oyentes), y reenvía comandos de sync
 // al content script de la pestaña de YouTube Music.
 
-const SIGNALING_URL = 'wss://TU-SERVIDOR-SIGNALING.example.com'; // cambiar por tu servidor desplegado
+const SIGNALING_URL = 'wss://ytjam.onrender.com'; // cambiar por tu servidor desplegado
 
 let ws = null;
 let role = null; // 'host' | 'listener' | null
