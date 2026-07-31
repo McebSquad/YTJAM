@@ -1,17 +1,53 @@
-// Signaling server mínimo para WebRTC.
-// Solo pasa mensajes SDP/ICE entre host y oyentes. NO transporta audio/video ni estado de reproducción.
-// Una vez conectados por WebRTC, todo el tráfico va P2P directo entre navegadores.
+// Signaling server para WebRTC + endpoint proxy de credenciales TURN.
+// El WebSocket solo pasa mensajes SDP/ICE entre host y oyentes. NO transporta audio/video.
+// El endpoint /turn-credentials guarda el API key de Metered SOLO en el servidor (variable de entorno),
+// nunca en el código de la extensión ni en git.
 
+const http = require('http');
 const WebSocket = require('ws');
 
 const PORT = process.env.PORT || 8080;
-const wss = new WebSocket.Server({ port: PORT });
+
+// Estas dos variables se configuran en Render → tu servicio → "Environment" → Add Environment Variable.
+// NUNCA se escriben en el código ni se suben a GitHub.
+const TURN_APP_NAME = process.env.TURN_APP_NAME || '';
+const TURN_API_KEY = process.env.TURN_API_KEY || '';
+
+const server = http.createServer(async (req, res) => {
+  if (req.method === 'GET' && req.url === '/turn-credentials') {
+    res.setHeader('Access-Control-Allow-Origin', '*'); // la extensión llama desde extension://, necesita CORS abierto
+
+    if (!TURN_APP_NAME || !TURN_API_KEY) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify([])); // sin TURN configurado: la extensión cae a solo-STUN
+      return;
+    }
+
+    try {
+      const upstream = await fetch(
+        `https://${TURN_APP_NAME}.metered.live/api/v1/turn/credentials?apiKey=${TURN_API_KEY}`
+      );
+      const data = await upstream.json();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(data));
+    } catch (err) {
+      console.error('[turn-credentials] error pidiendo a Metered:', err.message);
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify([]));
+    }
+    return;
+  }
+
+  res.writeHead(404);
+  res.end();
+});
+
+const wss = new WebSocket.Server({ server });
 
 // rooms: Map<roomCode, { host: ws|null, listeners: Map<clientId, ws> }>
 const rooms = new Map();
 
 function genRoomCode() {
-  // Código corto legible: 5 caracteres, sin 0/O/1/I para evitar confusión
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code;
   do {
@@ -62,13 +98,11 @@ wss.on('connection', (ws) => {
         ws.role = 'listener';
         room.listeners.set(ws.id, ws);
         console.log(`[unión exitosa] cliente ${ws.id} entró a sala ${msg.roomCode}`);
-        // Avisar al host que hay un nuevo oyente esperando conexión WebRTC
         send(room.host, { type: 'listener-joined', listenerId: ws.id });
         send(ws, { type: 'joined', hostPresent: true });
         break;
       }
 
-      // Retransmisión de señalización WebRTC (SDP offer/answer, ICE candidates)
       case 'signal': {
         const room = rooms.get(ws.roomCode);
         if (!room) return;
@@ -92,7 +126,6 @@ wss.on('connection', (ws) => {
     if (!room) return;
 
     if (ws.role === 'host') {
-      // Host se fue: avisar a todos los oyentes y cerrar la sala
       for (const listener of room.listeners.values()) {
         send(listener, { type: 'host-left' });
       }
@@ -104,4 +137,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-console.log(`Signaling server escuchando en puerto ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Signaling server escuchando en puerto ${PORT}`);
+  console.log(TURN_APP_NAME ? '[TURN] Configurado vía variables de entorno' : '[TURN] No configurado, solo STUN');
+});
